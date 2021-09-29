@@ -20,7 +20,7 @@ class EgyszerusitettPontszamitoKalkulator
 	{
 		$this->szakok = [
 			'Programtervező informatikus'=> [
-				'kotelezo' => [ 'name' => 'matematika', 'level' => ['közép', 'emelt'] ],
+				'kotelezo' => [ 'name' => 'matematika', 'level' => self::SUBJECT_LEVELS ],
 				'valaszthato' => ['biológia', 'fizika', 'informatika', 'kémia']
 			],
 			'Anglisztika'=> [
@@ -48,7 +48,15 @@ class EgyszerusitettPontszamitoKalkulator
 			return $this->testKotelezoErettsegiTantargySzazalek();
 		}
 
-		$kotelezo_eredmenye = 2*( $this->kotelezoEredmenye( $this->szakok[ $this->erettsegi_eredmeny['valasztott-szak']['szak'] ] ['kotelezo']['name'], $this->erettsegi_eredmeny['erettsegi-eredmenyek'] ) );
+		$kotelezo_eredmenye = $this->kotelezoEredmenye( $this->szakok[ $this->erettsegi_eredmeny['valasztott-szak']['szak'] ] ['kotelezo'], $this->erettsegi_eredmeny['erettsegi-eredmenyek'] );
+		if( !is_int( $kotelezo_eredmenye ) )
+		{
+			return $kotelezo_eredmenye;
+		}
+		else
+		{
+			$kotelezo_eredmenye = 2*$kotelezo_eredmenye;
+		}
 
 		$valaszthato_eredmenye = 2*( $this->valaszthatokLegjobbEredmenye( $this->szakok[ $this->erettsegi_eredmeny['valasztott-szak']['szak'] ] ['valaszthato'], $this->erettsegi_eredmeny['erettsegi-eredmenyek'] ) );
 
@@ -118,6 +126,7 @@ class EgyszerusitettPontszamitoKalkulator
 		$nyelvvizsga_tobbletpont = [];
 		foreach( $this->erettsegi_eredmeny['tobbletpontok'] as $eredmeny_key=>$eredmeny_value )
 		{
+			// ha még nincs adott nyelvből felvéve többletpont, akkor, akkor adjuk meg, ha van, akkor vizsgáljuk meg, nagyobb-e a meglévő pontszám, mint az új
 			$nyelvvizsga_tobbletpont[ $eredmeny_value['nyelv'] ] =
 				(!isset( $nyelvvizsga_tobbletpont[ $eredmeny_value['nyelv'] ] ) ?
 					self::TOBBLETPONT['NYELVVIZSGA'][ $eredmeny_value['tipus'] ] :
@@ -160,10 +169,13 @@ class EgyszerusitettPontszamitoKalkulator
 		return $emeltszintutobbletpont;
 	}
 
-	protected function kotelezoEredmenye($id, $array) {
-		foreach ($array as $key => $val) {
-			if ($val['nev'] === $id) {
-				return (int)$val['eredmeny'];
+	protected function kotelezoEredmenye($elvaras, $eredmenyek)
+	{
+		foreach ($eredmenyek as $eredmeny_key => $eredmeny_value)
+		{
+			if ($eredmeny_value['nev'] === $elvaras['name'] && in_array($eredmeny_value['tipus'], $elvaras['level']) )
+			{
+				return (int)$eredmeny_value['eredmeny'];
 			}
 		}
 		return 'nincs kötelező tárgyból érettségi';
