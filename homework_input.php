@@ -49,7 +49,7 @@ $exampleData = [
 ];
 
 // output: 476 (376 alappont + 100 többletpont)
-$exampleData = [
+$exampleData1 = [
     'valasztott-szak' => [
         'egyetem' => 'ELTE',
         'kar' => 'IK',
