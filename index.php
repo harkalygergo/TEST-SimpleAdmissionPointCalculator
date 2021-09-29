@@ -4,10 +4,14 @@ class EgyszerusitettPontszamitoKalkulator
 {
 	const KOTELEZO_TARGYAK = ['magyar nyelv és irodalom', 'történelem', 'matematika'];
 	const SUBJECT_LEVELS = ['közép', 'emelt'];
-	const NYELVVIZSGA_B2 = 28;
-	const NYELVVIZSGA_C1 = 40;
-	const EMELT_SZINT = 50;
-	const TOBBLETPONT_MAXIMUM = 100;
+	const TOBBLETPONT = [
+		'NYELVVIZSGA' => [
+			'B2' => 28,
+			'C1' => 40
+		],
+		'EMELT_SZINT' => 50,
+		'MAXIMUM' => 100
+	];
 
 	private $szakok;
 	private $erettsegi_eredmeny;
@@ -24,6 +28,64 @@ class EgyszerusitettPontszamitoKalkulator
 				'valaszthato' => ['francia', 'német', 'olasz', 'orosz', 'spanyol', 'történelem']
 			]
 		];
+	}
+
+	protected function nyelvvizsgaTobbletpontSzamitas()
+	{
+		$osszTobbletpont = 0;
+		$nyelvvizsga_tobbletpont = [];
+		foreach( $this->erettsegi_eredmeny['tobbletpontok'] as $eredmeny_key=>$eredmeny_value )
+		{
+			$nyelvvizsga_tobbletpont[ $eredmeny_value['nyelv'] ] =
+				(!isset( $nyelvvizsga_tobbletpont[ $eredmeny_value['nyelv'] ] ) ?
+					self::TOBBLETPONT['NYELVVIZSGA'][ $eredmeny_value['tipus'] ] :
+						( $nyelvvizsga_tobbletpont[ $eredmeny_value['nyelv'] ] > self::TOBBLETPONT['NYELVVIZSGA'][ $eredmeny_value['tipus'] ] ? $nyelvvizsga_tobbletpont[ $eredmeny_value['nyelv'] ] : self::TOBBLETPONT['NYELVVIZSGA'][ $eredmeny_value['tipus'] ])
+				);
+		}
+		foreach( $nyelvvizsga_tobbletpont as $adott_nyelv_tobbletpont )
+		{
+			$osszTobbletpont += $adott_nyelv_tobbletpont;
+		}
+		return $osszTobbletpont;
+	}
+
+	protected function valaszthatokLegjobbEredmenye($valaszthatok, $eredmeny)
+	{
+		$legjobberedmeny = 0;
+		foreach( $eredmeny as $key => $targy )
+		{
+			if( in_array( $targy['nev'], $valaszthatok ) )
+			{
+				if( $legjobberedmeny < (int)$targy['eredmeny'] )
+				{
+					$legjobberedmeny = (int)$targy['eredmeny'];
+				}
+			}
+		}
+		return $legjobberedmeny;
+	}
+
+	protected function emeltszintuTobbletpontszam()
+	{
+		$emeltszintutobbletpont = 0;
+		foreach( $this->erettsegi_eredmeny['erettsegi-eredmenyek'] as $eredmenyek )
+		{
+			if( $eredmenyek['tipus'] === 'emelt' )
+			{
+				$emeltszintutobbletpont += self::TOBBLETPONT['EMELT_SZINT'];
+			}
+		}
+		return $emeltszintutobbletpont;
+	}
+
+
+	protected function kotelezoEredmenye($id, $array) {
+		foreach ($array as $key => $val) {
+			if ($val['nev'] === $id) {
+				return (int)$val['eredmeny'];
+			}
+		}
+		return 'nincs kötelező tárgyból érettségi';
 	}
 
 	public function calculateResult( $data )
@@ -45,10 +107,20 @@ class EgyszerusitettPontszamitoKalkulator
 			return $this->testKotelezoErettsegiTantargySzazalek();
 		}
 
-		//$this->showConstant();
+		$kotelezo_eredmenye = 2*( $this->kotelezoEredmenye( $this->szakok[ $this->erettsegi_eredmeny['valasztott-szak']['szak'] ] ['kotelezo']['name'], $this->erettsegi_eredmeny['erettsegi-eredmenyek'] ) );
 
-		echo $this->calculatePontszam();
-		return 'lefutott';
+		$valaszthato_eredmenye = 2*( $this->valaszthatokLegjobbEredmenye( $this->szakok[ $this->erettsegi_eredmeny['valasztott-szak']['szak'] ] ['valaszthato'], $this->erettsegi_eredmeny['erettsegi-eredmenyek'] ) );
+
+		$osszeredmeny = $kotelezo_eredmenye+$valaszthato_eredmenye;
+
+		$nyelvvizsga_tobbletpont = $this->nyelvvizsgaTobbletpontSzamitas();
+
+		$emeltszintu_tobbletpontszam = $this->emeltszintuTobbletpontszam();
+
+		$osszTobbletpont = ( 100 > $nyelvvizsga_tobbletpont+$emeltszintu_tobbletpontszam ? $nyelvvizsga_tobbletpont+$emeltszintu_tobbletpontszam : 100);
+
+		//echo $this->calculatePontszam();
+		return $osszeredmeny."+".$osszTobbletpont;
 	}
 
 	protected function calculatePontszam()
@@ -108,14 +180,6 @@ class EgyszerusitettPontszamitoKalkulator
 			return false;
 		}
 		return true;
-	}
-
-	protected function showConstant()
-	{
-		foreach( self::KOTELEZO_TARGYAK as $k )
-		{
-			echo "$k\n";
-		}
 	}
 }
 
